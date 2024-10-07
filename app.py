@@ -28,7 +28,8 @@ def process_image():
     img = cv2.resize(img, (widthImg, heightImg))
 
     # Begin the same processing steps as in Main.py
-    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert image to gray scale
+    # Convert image to gray scale
+    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 1)  # Add Gaussian Blur
     imgThreshold = cv2.Canny(
         imgBlur, threshold_value, threshold_value
@@ -50,16 +51,18 @@ def process_image():
     biggest, _ = utlis.biggestContour(contours)  # Get the biggest contour
     if biggest.size != 0:
         biggest = utlis.reorder(biggest)
-        pts1 = np.float32(biggest)  # Prepare points for perspective transformation
+        # Prepare points for perspective transformation
+        pts1 = np.float32(biggest)
         pts2 = np.float32(
             [[0, 0], [widthImg, 0], [0, heightImg], [widthImg, heightImg]]
         )
         matrix = cv2.getPerspectiveTransform(pts1, pts2)
-        imgWarpColored = cv2.warpPerspective(img, matrix, (widthImg, heightImg))
+        imgWarpColored = cv2.warpPerspective(
+            img, matrix, (widthImg, heightImg))
 
         # Remove 20 pixels from each side
         imgWarpColored = imgWarpColored[
-            20 : imgWarpColored.shape[0] - 20, 20 : imgWarpColored.shape[1] - 20
+            20: imgWarpColored.shape[0] - 20, 20: imgWarpColored.shape[1] - 20
         ]
         imgWarpColored = cv2.resize(imgWarpColored, (widthImg, heightImg))
 
@@ -89,4 +92,4 @@ def process_image():
 # if __name__ == "__main__":
 #     app.run(debug=True)
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=1234, debug=True)
