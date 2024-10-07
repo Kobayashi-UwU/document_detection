@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document Detection</title>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+  </head>
+  <body>
+    <div class="container mt-4">
+      <h2 class="text-center">Document Detection</h2>
+      <div class="form-group text-center">
+        <!-- Button to open the camera -->
+        <button id="openCamera" class="btn btn-success m-2">Open Camera</button>
+        <!-- Button to upload an image -->
+        <input
+          type="file"
+          class="btn btn-primary m-2"
+          id="imageInput"
+          name="file"
+        />
+      </div>
+
+      <!-- Camera video display (Hidden by default) -->
+      <div class="text-center">
+        <video id="video" width="640" height="480" autoplay hidden></video>
+        <button id="captureImage" class="btn btn-warning mt-2" hidden>
+          Capture Image
+        </button>
+      </div>
+
+      <!-- Threshold adjustment bar -->
+      <div class="mt-4">
+        <label for="threshold">Adjust Threshold:</label>
+        <input
+          type="range"
+          id="threshold"
+          name="threshold"
+          min="0"
+          max="255"
+          value="128"
+          step="1"
+        />
+        <span id="thresholdValue">128</span>
+      </div>
+
+      <!-- Button to start image processing -->
+      <button id="processImage" class="btn btn-primary mt-4">
+        Process Image
+      </button>
+
+      <!-- Display the original and processed images -->
+      <div class="row mt-4" id="resultSection" hidden>
+        <div class="col-md-6">
+          <h5>Original Image</h5>
+          <img id="originalImage" class="img-fluid" alt="Original Image" />
+        </div>
+        <div class="col-md-6">
+          <h5>Processed Image</h5>
+          <img id="processedImage" class="img-fluid" alt="Processed Image" />
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let video = document.getElementById("video");
+      let captureImageBtn = document.getElementById("captureImage");
+      let imageInput = document.getElementById("imageInput");
+      let thresholdInput = document.getElementById("threshold");
+      let thresholdValue = document.getElementById("thresholdValue");
+      let processImageBtn = document.getElementById("processImage");
+      let originalImage = document.getElementById("originalImage");
+      let processedImage = document.getElementById("processedImage");
+      let resultSection = document.getElementById("resultSection");
+      let imageDataUrl = "";
+      let cameraStream;
+
+      // Handle threshold slider value display
+      thresholdInput.oninput = function () {
+        thresholdValue.textContent = this.value;
+      };
+
+      // Open camera and start video stream
+      document.getElementById("openCamera").addEventListener("click", () => {
+        navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then((stream) => {
+            cameraStream = stream;
+            video.srcObject = stream;
+            video.hidden = false;
+            captureImageBtn.hidden = false;
+          })
+          .catch((err) => {
+            console.error("Error accessing camera: ", err);
+          });
+      });
+
+      // Capture image from the video stream
+      captureImageBtn.addEventListener("click", () => {
+        let canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        let context = canvas.getContext("2d");
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        imageDataUrl = canvas.toDataURL("image/jpeg");
+        video.hidden = true;
+        captureImageBtn.hidden = true;
+        cameraStream.getTracks().forEach((track) => track.stop()); // Stop the camera stream
+        originalImage.src = imageDataUrl;
+      });
+
+      // Handle image upload
+      imageInput.addEventListener("change", (e) => {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+        reader.onload = function (event) {
+          imageDataUrl = event.target.result;
+          originalImage.src = imageDataUrl;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Process the image (send to backend)
+      processImageBtn.addEventListener("click", () => {
+        if (!imageDataUrl) {
+          alert("Please capture an image or upload one first!");
+          return;
+        }
+
+        let threshold = thresholdInput.value;
+
+        // Send the image and threshold value to the Flask backend
+        fetch("/process_image", {
+          method: "POST",
+          body: JSON.stringify({ image: imageDataUrl, threshold: threshold }),
+          headers: { "Content-Type": "application/json" },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            // Show the original and processed images
+            processedImage.src = `data:image/jpeg;base64,${data.processed}`;
+            resultSection.hidden = false;
+          })
+          .catch((err) => {
+            console.error("Error processing image: ", err);
+          });
+      });
+    </script>
+  </body>
+</html>
